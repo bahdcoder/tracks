@@ -21,6 +21,7 @@ const server = http.createServer((req, res) => {
 
   // Log all headers, IP address, and method
   console.log("Request Headers:", req.headers)
+  console.log("Request URL", parsedUrl)
   console.log("IP Address:", ipAddress)
   console.log("Method:", req.method)
 
