@@ -23,7 +23,7 @@ function logCtx(ctx) {
 app.get("/clicks", function (ctx) {
   logCtx(ctx)
 
-  ctx.redirect("https://google.com")
+  return ctx.redirect("https://google.com")
 })
 
 app.get("/opens", function (ctx) {
