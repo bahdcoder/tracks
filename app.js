@@ -1,8 +1,6 @@
-const http = require("http")
-const url = require("url")
-const fs = require("fs")
-const path = require("path")
-
+const { Hono } = require("hono")
+const { serve } = require("@hono/node-server")
+const { getConnInfo } = require("@hono/node-server/conninfo")
 // Create a 1x1 transparent PNG buffer
 const onePxPngBuffer = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
@@ -13,43 +11,39 @@ const onePxPngBuffer = Buffer.from([
   0x60, 0x82,
 ])
 
-// Create server
-const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true)
-  const ipAddress =
-    req.headers["x-forwarded-for"] || req.connection.remoteAddress
+const app = new Hono()
 
-  // Log all headers, IP address, and method
-  console.log("Request Headers:", req.headers)
-  console.log("Request URL", parsedUrl)
-  console.log("IP Address:", ipAddress)
-  console.log("Method:", req.method)
+function logCtx(ctx) {
+  console.log("----> url", ctx.req.url)
+  console.log("----> conn", getConnInfo(ctx))
+  console.log("----> uagent", ctx.req.header("User-Agent"))
+  console.log("----> headers", ctx.req.header())
+}
 
-  if (parsedUrl.pathname === "/clicks") {
-    // Log additional user info if available
-    console.log("User Info:", req.headers["user-agent"])
+app.get("/clicks", function (ctx) {
+  logCtx(ctx)
 
-    // Redirect to google.com
-    res.writeHead(302, { Location: "https://www.google.com" })
-    res.end()
-  } else if (parsedUrl.pathname === "/opens") {
-    // Log additional user info if available
-    console.log("User Info:", req.headers["user-agent"])
+  ctx.redirect("https://google.com")
+})
 
-    // Serve the 1x1 transparent PNG
-    res.writeHead(200, {
-      "Content-Type": "image/png",
-      "Content-Length": onePxPngBuffer.length,
-    })
-    res.end(onePxPngBuffer)
-  } else {
-    // Handle unknown endpoints
-    res.writeHead(404, { "Content-Type": "text/plain" })
-    res.end("Endpoint not found")
+app.get("/opens", function (ctx) {
+  logCtx(ctx)
+  const headers = new Headers()
+
+  headers.set("Content-Type", "image/png")
+  headers.set("Content-Length", onePxPngBuffer.length.toString())
+
+  return new Response(onePxPngBuffer, {
+    headers,
+  })
+})
+
+serve(
+  {
+    fetch: app.fetch,
+    port: process.env.PORT || 4444,
+  },
+  ({ address, port }) => {
+    console.log(`Server is running on http://${address}:${port}`)
   }
-})
-
-// Start server on port 3000
-server.listen(process.env.PORT || 4444, () => {
-  console.log("Server is running on http://localhost:4444")
-})
+)
